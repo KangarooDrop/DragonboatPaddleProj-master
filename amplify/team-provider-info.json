@@ -1,0 +1,19 @@
+{
+    "paddleenv": {
+        "awscloudformation": {
+            "AuthRoleName": "paddleproject-master-paddleenv-20191201203138-authRole",
+            "UnauthRoleArn": "arn:aws:iam::875332240211:role/paddleproject-master-paddleenv-20191201203138-unauthRole",
+            "AuthRoleArn": "arn:aws:iam::875332240211:role/paddleproject-master-paddleenv-20191201203138-authRole",
+            "Region": "us-east-1",
+            "DeploymentBucketName": "paddleproject-master-paddleenv-20191201203138-deployment",
+            "UnauthRoleName": "paddleproject-master-paddleenv-20191201203138-unauthRole",
+            "StackName": "paddleproject-master-paddleenv-20191201203138",
+            "StackId": "arn:aws:cloudformation:us-east-1:875332240211:stack/paddleproject-master-paddleenv-20191201203138/7cf04f90-14a3-11ea-a403-0ed5356bca17"
+        },
+        "categories": {
+            "auth": {
+                "paddleprojectmasterd9e4baf2": {}
+            }
+        }
+    }
+}

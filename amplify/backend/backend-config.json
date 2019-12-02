@@ -1,0 +1,15 @@
+{
+	"auth": {
+		"paddleprojectmasterd9e4baf2": {
+			"service": "Cognito",
+			"providerPlugin": "awscloudformation",
+			"dependsOn": []
+		}
+	},
+	"storage": {
+		"s3SaveBucket": {
+			"service": "S3",
+			"providerPlugin": "awscloudformation"
+		}
+	}
+}
