@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.graphics.RectF;
 
@@ -28,6 +29,7 @@ public class OrientationViewer extends View
         w = getWidth();
         h = getHeight();
         paddle = new Paddle(0, 0);
+        Log.w("focus", "ive got it" + w + ", " + h);
     }
 
     int arrowHeadLen = 40;

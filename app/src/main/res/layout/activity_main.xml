@@ -61,20 +61,7 @@
         app:layout_constraintVertical_bias="0.161" />
     -->
 
-        <com.jjoe64.graphview.GraphView
-            android:id="@+id/graph"
-            android:layout_width="387dp"
-            android:layout_height="359dp"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentBottom="true"
-            android:layout_marginStart="0dp"
-            android:layout_marginLeft="8dp"
-            android:layout_marginTop="348dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginRight="8dp"
-            android:layout_marginBottom="8dp" />
+
 
         <Button
             android:id="@+id/closebuttton"
@@ -145,17 +132,59 @@
             android:text="Save"
             android:textSize="10sp" />
 
+    <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/display_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@+id/savebutton"
+        android:layout_marginTop="8dp"
+        android:background="#ffffffff"
+        android:orientation="vertical">
+
         <com.dfrobot.angelo.blunobasicdemo.OrientationViewer
             android:id="@+id/orient_view"
             android:layout_width="wrap_content"
             android:layout_height="200dp"
-            android:layout_below="@+id/savebutton"
             android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
             android:layout_marginStart="8dp"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="-200dp" />
+            android:layout_marginTop="4dp" />
 
-        <Button
+        <com.jjoe64.graphview.GraphView
+            android:id="@+id/graph"
+            android:layout_below="@+id/orient_view"
+            android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_marginRight="8dp"
+            android:layout_marginBottom="8dp" />
+    </TableLayout>
+
+    <TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/analytics_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@+id/savebutton"
+        android:layout_marginTop="8dp"
+        android:background="#ffffffff"
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+
+        <TextView
+            android:id="@+id/analytics_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Analytics"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="4dp"/>
+
+    </TableLayout>
+
+    <Button
             android:id="@+id/button2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -165,9 +194,14 @@
             android:layout_marginBottom="48dp"
             android:text="LogOut" />
 
-        <com.dfrobot.angelo.blunobasicdemo.ScreenSlidePagerActivity
-            android:id="@+id/pager_act"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+    <Button
+        android:id="@+id/button3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="27dp"
+        android:layout_marginBottom="16dp"
+        android:text="Swap Views" />
 
 </RelativeLayout>

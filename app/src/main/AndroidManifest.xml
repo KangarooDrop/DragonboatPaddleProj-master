@@ -52,7 +52,9 @@ PackageManager.hasSystemFeature(FEATURE_BLUETOOTH_LE) -->
         <activity
             android:name=".AuthenticationActivity"
             android:noHistory="true">
-
+        </activity>
+        <activity
+            android:name=".ScreenSlidePagerActivity">
         </activity>
 
         <service android:name="com.dfrobot.angelo.blunobasicdemo.BluetoothLeService" android:enabled="true"/>

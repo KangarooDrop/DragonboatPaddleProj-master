@@ -15,6 +15,9 @@ import android.content.Intent;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentStatePagerAdapter;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.text.InputType;
@@ -29,6 +32,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -84,6 +88,10 @@ public class MainActivity  extends BlunoLibrary {
 	private boolean scrollToEndOfGraph = true;
 
 	private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
+
+	int displayedView = 0;
+	private TableLayout displayTable,
+		analyticsTable;
 
 	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 		switch (requestCode) {
@@ -383,7 +391,29 @@ public class MainActivity  extends BlunoLibrary {
 				calibrate();
 			}
 		});
+
+		findViewById(R.id.button3).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View view) {
+				if (displayedView == 0)
+				{
+					displayedView = 1;
+					displayTable.setVisibility(View.INVISIBLE);
+					analyticsTable.setVisibility(View.VISIBLE);
+				}
+				else if (displayedView == 1)
+				{
+					displayedView = 0;
+					displayTable.setVisibility(View.VISIBLE);
+					analyticsTable.setVisibility(View.INVISIBLE);
+				}
+			}
+		});
+
+		displayTable = findViewById(R.id.display_layout);
+		analyticsTable = findViewById(R.id.analytics_layout);
 	}
+
 
 	private boolean calibrating = false;
 	private double calibTimer = 0;
