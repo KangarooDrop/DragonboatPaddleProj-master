@@ -165,4 +165,9 @@
             android:layout_marginBottom="48dp"
             android:text="LogOut" />
 
+        <com.dfrobot.angelo.blunobasicdemo.ScreenSlidePagerActivity
+            android:id="@+id/pager_act"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
 </RelativeLayout>
