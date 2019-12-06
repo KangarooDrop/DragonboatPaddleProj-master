@@ -64,8 +64,20 @@ public class Vector3
         div(v.x, v.y, v.z);
     }
 
+    public void div(double n) {div(n,n,n);}
+
     public double len()
     {
         return Math.sqrt(x*x+y*y+z*z);
+    }
+
+    public static Vector3 div(Vector3 v, double n)
+    {
+        return new Vector3(v.x / n, v.y / n, v.z / n);
+    }
+
+    public String toString()
+    {
+        return "{" + x + ", " + y + ", " + z + "}";
     }
 }

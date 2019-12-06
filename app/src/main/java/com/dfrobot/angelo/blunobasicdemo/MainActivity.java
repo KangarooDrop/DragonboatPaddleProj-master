@@ -3,13 +3,16 @@ package com.dfrobot.angelo.blunobasicdemo;
 //https://github.com/DFRobot/BlunoBasicDemo
 //https://github.com/jjoe64/GraphView/wiki/Realtime-chart
 
+import android.view.Gravity;
 import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SyncStatusObserver;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.content.Intent;
 import android.provider.ContactsContract;
@@ -40,6 +43,15 @@ import com.amazonaws.mobile.client.AWSMobileClient;
 import com.amazonaws.mobile.client.Callback;
 import com.amazonaws.mobile.client.SignInUIOptions;
 import com.amazonaws.mobile.client.UserStateDetails;
+import com.amazonaws.mobileconnectors.s3.transferutility.TransferListener;
+import com.amazonaws.mobileconnectors.s3.transferutility.TransferObserver;
+import com.amazonaws.mobileconnectors.s3.transferutility.TransferState;
+import com.amazonaws.mobileconnectors.s3.transferutility.TransferUtility;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.regions.Region;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
@@ -54,12 +66,14 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 public class MainActivity  extends BlunoLibrary {
 
 	private Button buttonScan;
+	private TextView analyticsTextView;
 
 	private double startRecordTime = -1;
 	private double stopRecordTime = -1;
@@ -72,9 +86,7 @@ public class MainActivity  extends BlunoLibrary {
 	private Spinner dataSelectionSpinner;
 	ArrayList<String> spinnerList = new ArrayList<>();
 
-	private ObjectAnimator firstAnimator;
-	private ObjectAnimator secondAnimator;
-	private GraphView graph;
+	private GraphView pressureGraph, rotationGraph;
 	private GraphView transGraph;
 	private ArrayList<LineGraphSeries<DataPoint>>[] graphSeries;
 	private ArrayList<DataPoint> allGraphSeries;
@@ -126,7 +138,10 @@ public class MainActivity  extends BlunoLibrary {
 
 		ov = findViewById(R.id.orient_view);
 
-		graph = findViewById(R.id.graph);
+		analyticsTextView = findViewById(R.id.analytics_text);
+
+		pressureGraph = findViewById(R.id.graph);
+		rotationGraph = findViewById(R.id.graph2);
 		graphSeries = new ArrayList[4];
 		for(int i = 0; i < 4; i++) {
 			graphSeries[i] = new ArrayList<>();
@@ -135,11 +150,21 @@ public class MainActivity  extends BlunoLibrary {
 		graphSeries[1].get(0).setColor(0xffff0000);
 		graphSeries[2].get(0).setColor(0xff00ff00);
 		graphSeries[3].get(0).setColor(0xff0000ff);
-		graph.getViewport().setXAxisBoundsManual(true);
-		graph.getViewport().setMinX(0);
-		graph.getViewport().setMaxX(5);
-		graph.getViewport().setScrollable(true);
-		graph.getViewport().setOnXAxisBoundsChangedListener(new Viewport.OnXAxisBoundsChangedListener() {
+		pressureGraph.getViewport().setXAxisBoundsManual(true);
+		pressureGraph.getViewport().setYAxisBoundsManual(true);
+		pressureGraph.getViewport().setMinX(0);
+		pressureGraph.getViewport().setMaxX(5);
+		pressureGraph.getViewport().setMinY(0);
+		pressureGraph.getViewport().setMaxY(23);
+
+		rotationGraph.getViewport().setXAxisBoundsManual(true);
+		rotationGraph.getViewport().setYAxisBoundsManual(true);
+		rotationGraph.getViewport().setMinX(0);
+		rotationGraph.getViewport().setMaxX(5);
+		rotationGraph.getViewport().setScrollable(true);
+		rotationGraph.getViewport().setMinY(-210);
+		rotationGraph.getViewport().setMaxY(210);
+		rotationGraph.getViewport().setOnXAxisBoundsChangedListener(new Viewport.OnXAxisBoundsChangedListener() {
 			@Override
 			public void onXAxisBoundsChanged(double minX, double maxX, Reason reason) {
 				if (selectedPosition != 0)
@@ -154,21 +179,44 @@ public class MainActivity  extends BlunoLibrary {
 					ov.setAngles(data[0] * Math.PI / 180, data[1] * Math.PI / 180);
 					ov.invalidate();
 				}
+
+
+
+
 			}
+
+
+			/*
+				AWSMobileClient.getInstance().initialize(getApplicationContext(), new Callback<UserStateDetails>() {
+					@Override
+					public void onResult(UserStateDetails userStateDetails) {
+						try {
+							Amplify.addPlugin(new AWSS3StoragePlugin());
+							Amplify.configure(getApplicationContext());
+							Log.i("StorageQuickstart", "All set and ready to go!");
+						} catch (Exception e) {
+							Log.e("StorageQuickstart", e.getMessage());
+						}
+					}
+
+					@Override
+					public void onError(Exception e) {
+						Log.e("StorageQuickstart", "Initialization error.", e);
+					}
+				});
+
+*/
+
+
 		});
 		DisplayMetrics mets = new DisplayMetrics();
 		getWindowManager().getDefaultDisplay().getMetrics(mets);
 		final int width = mets.widthPixels;
 
-		firstAnimator = ObjectAnimator.ofFloat(graph, "translationX", width);
-		firstAnimator.setDuration(200);
-		secondAnimator = ObjectAnimator.ofFloat(graph, "translationX", 0);
-		secondAnimator.setDuration(200);
-
 		recordPressureSeries.setColor(0xffff0000);
-		recordAngleXSeries.setColor(0xffff0000);
-		recordAngleYSeries.setColor(0xffff0000);
-		recordAngleZSeries.setColor(0xffff0000);
+		recordAngleXSeries.setColor(0xff00ffff);
+		recordAngleYSeries.setColor(0xffff00ff);
+		recordAngleZSeries.setColor(0xffffff00);
 
 		spinnerList.add("Live");
 		List<String> fileNames = getAllFilenames();
@@ -184,71 +232,98 @@ public class MainActivity  extends BlunoLibrary {
 		}
 		dataSelectionSpinner = findViewById(R.id.data_spinner);
 		updateSpinnerList();
+		dataSelectionSpinner.setBackgroundResource(android.R.drawable.btn_default);
 		dataSelectionSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener()
 		{
 			@Override
 			public void onItemSelected(AdapterView<?> arg0, View arg1, int position, long id)
 			{
-				firstAnimator.start();
 				selectedPosition = position;
 
-				graph.postDelayed(new Runnable()
+				scrollToEndOfGraph = (selectedPosition == 0);
+				pressureGraph.removeAllSeries();
+				rotationGraph.removeAllSeries();
+				pressureGraph.addSeries(graphSeries[0].get(selectedPosition));
+				rotationGraph.addSeries(graphSeries[1].get(selectedPosition));
+				rotationGraph.addSeries(graphSeries[2].get(selectedPosition));
+				rotationGraph.addSeries(graphSeries[3].get(selectedPosition));
+				if (selectedPosition != 0)
 				{
-					@Override
-					public void run()
-					{
-						graph.setX(-width);
-						secondAnimator.start();
+					pressureGraph.getViewport().setScrollable(true);
+					rotationGraph.getViewport().setScrollable(true);
+					for (int i = 0; i < 4; i++)
+						graphSeries[i].get(selectedPosition).resetData(new DataPoint[] {});
+					graphSeries[1].get(selectedPosition).setColor(0xffff0000);
+					graphSeries[2].get(selectedPosition).setColor(0xff00ff00);
+					graphSeries[3].get(selectedPosition).setColor(0xff0000ff);
+					List<String> strData = readFromDataFile(spinnerList.get(selectedPosition));
+					scrollToEndOfGraph = true;
+					double fileXVal = 0,
+						lastPressure = 0;
+					double pressureExertedTotal = 0;
+					ArrayList<Vector3> anglesEntering = new ArrayList<Vector3>(), anglesExiting = new ArrayList<Vector3>();
+					boolean inWaterRecording = false;
+					for(String line : strData) {
+						Log.w("reading", line);
+						List<String> splitLine = Arrays.asList(line.split(" "));
+						int tIndex = splitLine.indexOf("t:");
+						int pIndex = splitLine.indexOf("p:");
+						int dIndex = splitLine.indexOf("d:");
+						if (tIndex != -1) {
+							try {
+								double deltaTime = Double.parseDouble(splitLine.get(tIndex + 1));
+								if (pIndex != -1 && dIndex != -1) {
+									double pressure = Double.parseDouble(splitLine.get(pIndex + 1));
+									graphSeries[0].get(selectedPosition).appendData(new DataPoint(fileXVal, pressure), false, numOfPoints);
+									pressureExertedTotal += getDeltaForce(deltaTime, pressure, lastPressure);
 
-						scrollToEndOfGraph = (selectedPosition == 0);
-						graph.removeAllSeries();
-//						graph.addSeries(graphSeries[0].get(selectedPosition));
-						graph.addSeries(graphSeries[1].get(selectedPosition));
-						graph.addSeries(graphSeries[2].get(selectedPosition));
-						graph.addSeries(graphSeries[3].get(selectedPosition));
-						if (selectedPosition != 0)
-						{
-							graph.getViewport().setScrollable(true);
-							double startX = graphXValue;
-							graphXValue = 0;
-							graphSeries[0].get(selectedPosition).resetData(new DataPoint[] {});
-							List<String> strData = readFromDataFile(spinnerList.get(selectedPosition));
-							boolean pastScroll = scrollToEndOfGraph;
-							scrollToEndOfGraph = true;
-							for(String line : strData) {
-								Log.w("reading", line);
-								List<String> splitLine = Arrays.asList(line.split(" "));
-								int tIndex = splitLine.indexOf("t:");
-								int pIndex = splitLine.indexOf("p:");
-								int dIndex = splitLine.indexOf("d:");
-								if (tIndex != -1) {
-									parseReceived(splitLine.get(pIndex) + " " + splitLine.get(pIndex + 1), selectedPosition);
-									parseReceived(splitLine.get(tIndex) + " " + splitLine.get(tIndex + 1), selectedPosition);
-									if (dIndex != -1) {
-										try {
-											graphSeries[1].get(selectedPosition).appendData(new DataPoint(graphXValue, Double.parseDouble(splitLine.get(dIndex + 1))), false, numOfPoints);
-											graphSeries[2].get(selectedPosition).appendData(new DataPoint(graphXValue, Double.parseDouble(splitLine.get(dIndex + 2))), false, numOfPoints);
-											graphSeries[3].get(selectedPosition).appendData(new DataPoint(graphXValue, Double.parseDouble(splitLine.get(dIndex + 3))), false, numOfPoints);
-										}
-										catch (IllegalArgumentException e)
-										{
-											e.printStackTrace();
-										}
+									double angleX = Double.parseDouble(splitLine.get(dIndex + 1)),
+											angleY = Double.parseDouble(splitLine.get(dIndex + 2)),
+											angleZ = Double.parseDouble(splitLine.get(dIndex + 3));
+
+									if (pressure > 4 && !inWaterRecording) {
+										inWaterRecording = true;
+										anglesEntering.add(new Vector3(angleX, angleY, angleZ));
+									} else if (pressure < 4 && inWaterRecording) {
+										inWaterRecording = false;
+										anglesExiting.add(new Vector3(angleX, angleY, angleZ));
 									}
-								}
-							}
-							graphXValue = startX;
-							scrollToEndOfGraph = pastScroll;
+									lastPressure = pressure;
 
-						}
-						else {
-							graph.getViewport().setScrollable(false);
-							graph.addSeries(recordPressureSeries);
+									graphSeries[1].get(selectedPosition).appendData(new DataPoint(fileXVal, (angleX > 180 ? angleX -360 : (angleX < -180 ? angleX + 360 : angleX))), false, numOfPoints);
+									graphSeries[2].get(selectedPosition).appendData(new DataPoint(fileXVal, (angleY > 180 ? angleY -360 : (angleY < -180 ? angleY + 360 : angleY))), false, numOfPoints);
+									graphSeries[3].get(selectedPosition).appendData(new DataPoint(fileXVal, (angleZ > 180 ? angleZ -360 : (angleZ < -180 ? angleZ + 360 : angleZ))), false, numOfPoints);
+								}
+								fileXVal += deltaTime;
+							} catch (IllegalArgumentException e) {
+								e.printStackTrace();
+							}
 						}
 					}
-				}, 200);
+					Vector3[] enteringArray = new Vector3[anglesEntering.size()];
+					Vector3[] exitingArray = new Vector3[anglesExiting.size()];
+					for(int i = 0; i < anglesEntering.size(); i++)
+						enteringArray[i] = anglesEntering.get(i);
+					for(int i = 0; i < anglesExiting.size(); i++)
+						exitingArray[i] = anglesExiting.get(i);
+							Vector3 averageEntering = averageAngles(enteringArray),
+								averageExiting = averageAngles(exitingArray);
+							String analyticsString = "";
+							analyticsString += "Total force exerted: " + pressureExertedTotal + "V\n";
+							analyticsString += "Average entering angle: " + String.format("%.2f", averageEntering.x) + ", " + String.format("%.2f", averageEntering.y) + ", " + String.format("%.2f", averageEntering.z) + "\n";
+							analyticsString += "Average exiting angle: " + String.format("%.2f", averageExiting.x) + ", " + String.format("%.2f", averageExiting.y) + ", " + String.format("%.2f", averageExiting.z) + "\n";
+								analyticsTextView.setText(analyticsString);
+						}
+				else {
+					pressureGraph.getViewport().setScrollable(false);
+					rotationGraph.getViewport().setScrollable(false);
+					pressureGraph.addSeries(recordPressureSeries);
+					rotationGraph.addSeries(recordAngleXSeries);
+					rotationGraph.addSeries(recordAngleYSeries);
+					rotationGraph.addSeries(recordAngleZSeries);
+				}
 			}
-			@Override
+
 			public void onNothingSelected(AdapterView<?> arg0)
 			{
 
@@ -326,8 +401,6 @@ public class MainActivity  extends BlunoLibrary {
 							recordAngleYSeries.resetData(new DataPoint[] {});
 							recordAngleZSeries.resetData(new DataPoint[] {});
 						}
-						else
-							Toast.makeText(MainActivity.this, "Could not create file with the selected name. Please try again with a different file name", Toast.LENGTH_LONG).show();
 					}
 				}).setNegativeButton("Cancel", null).show();
 			}
@@ -354,11 +427,34 @@ public class MainActivity  extends BlunoLibrary {
 			}
 		});
 
-		Button closeButton = findViewById(R.id.closebuttton);
+		Button downloadButton = findViewById(R.id.downloadButton);
+		downloadButton.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view)
+			{
+				final EditText input = new EditText(MainActivity.this);
+				input.setInputType(InputType.TYPE_CLASS_TEXT);
+
+				new AlertDialog.Builder(MainActivity.this).setTitle("File to download:").setView(input).setPositiveButton("OK", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+
+						downloadWithTransferUtility(input.getText().toString());
+						updateSpinnerList();
+
+					}
+				}).setNegativeButton("Cancel", null).show();
+			}
+
+									   });
+
+
+			Button closeButton = findViewById(R.id.closebuttton);
 		closeButton.setOnClickListener(new View.OnClickListener() {
 			@Override
 			public void onClick(View view)
 			{
+				updateSpinnerList();
 				String name = dataSelectionSpinner.getSelectedItem().toString();
 				if (dataSelectionSpinner.getSelectedItemPosition() != 0) {
 					new AlertDialog.Builder(MainActivity.this).setTitle("Are you sure you want to delete \"" + name + "\" forever?")
@@ -421,19 +517,16 @@ public class MainActivity  extends BlunoLibrary {
 	private double calibGyroX = 0,
 			calibGyroY = 0,
 			calibGyroZ = 0;
-	private int calibNumGyroPoints = 0;
+	private int calibNumPoints = 0;
 
-	private double calibPressure = 0;
-	private int calibNumPressurePoints = 0;
+	private double calibPressure = 0,
+			calibPressure2 = 0;
 
 	private double paddleAngleX = 0,
 			paddleAngleY = 0,
 			paddleAngleZ = 0;
 
-	private double calibAccX = 0,
-			calibAccY = 0,
-			calibAccZ = 0,
-			averageAccX = 0,
+	private double averageAccX = 0,
 			averageAccY = 0,
 			averageAccZ = 0;
 
@@ -441,23 +534,26 @@ public class MainActivity  extends BlunoLibrary {
 			averageGyroY = 0,
 			averageGyroZ = 0,
 
-	averagePressure;
+	averagePressure,
+	averagePressure2;
 
 	private void calibrate()
 	{
+		forceExertedTotal = 0;
+		averageWaterAngleEnter = new Vector3();
+		averageWaterAngleExit = new Vector3();
+
+
 		calibrating = true;
 		calibTimer = 0;
 
 		calibGyroX = 0;
 		calibGyroY = 0;
 		calibGyroZ = 0;
-		calibAccX = 0;
-		calibAccY = 0;
-		calibAccZ = 0;
-		calibNumGyroPoints = 0;
+		calibNumPoints = 0;
 
 		calibPressure = 0;
-		calibNumPressurePoints = 0;
+		calibPressure2 = 0;
 	}
 
 	private double[][] mulMatrix(double[][] m1, double[][] m2)
@@ -476,63 +572,6 @@ public class MainActivity  extends BlunoLibrary {
 
 
 /*
-	private void addStringToGraph(String line, int index)
-	{
-		try {
-			List<String> lineData = Arrays.asList(line.split(" "));
-				int timeStepIndex = lineData.indexOf("t") + 1;
-				int pressureIndex = lineData.indexOf("p") + 1;
-				int accelIndex = lineData.indexOf("a") + 1;
-				int gyroIndex = lineData.indexOf("g") + 1;
-				if (timeStepIndex != 0 && timeStepIndex < lineData.size()) {
-					double deltaTime = Double.parseDouble(lineData.get(timeStepIndex));
-					if (calibrating) {
-						calibTimer += deltaTime;
-
-					}
-					if (pressureIndex != 0 && pressureIndex < lineData.size()) {
-						double pressureVal = Double.parseDouble(lineData.get(pressureIndex));
-						if (!calibrating) {
-							DataPoint receivedPoint = new DataPoint(graphXValue, pressureVal);
-							series.appendData(receivedPoint, scrollToEndOfGraph, numOfPoints);
-						} else {
-							calibPressure += pressureVal;
-							++calibNumPressurePoints;
-						}
-					}
-
-					if (series.equals(graphSeries.get(0))) {
-						if (gyroIndex != 0 && gyroIndex + 3 < lineData.size() && accelIndex != 0 && accelIndex + 3 < lineData.size()) {
-
-							double gyroX = Double.parseDouble(lineData.get(gyroIndex + 0)),
-									gyroY = Double.parseDouble(lineData.get(gyroIndex + 1)),
-									gyroZ = Double.parseDouble(lineData.get(gyroIndex + 2));
-							double accX = Double.parseDouble(lineData.get(accelIndex + 0)),
-									accY = Double.parseDouble(lineData.get(accelIndex + 1)),
-									accZ = Double.parseDouble(lineData.get(accelIndex + 2));
-
-							Log.w("accel", "" + accZ);
-							if (!calibrating) {
-								ov.setAngles(paddleAngleX * Math.PI / 180, paddleAngleY * Math.PI / 180);
-								ov.invalidate();
-
-
-
-							double k = 0.98;
-							paddleAngleX += (gyroX - averageGyroX) * deltaTime;
-							paddleAngleY += (gyroY - averageGyroY) * deltaTime;
-							paddleAngleZ += (gyroZ - averageGyroZ) * deltaTime;
-
-							double forceMag = Math.sqrt(accX*accX + accY*accY + accZ*accZ);
-							if (forceMag >= -20 && forceMag <= 20)
-							{
-								double accAngleX = - Math.atan2(accY, accZ) * 180 / Math.PI;
-								paddleAngleX = SmoothAngle(paddleAngleX, accAngleX);
-								double accAngleY = Math.atan2(accX, accZ)* 180 / Math.PI;
-								paddleAngleY = SmoothAngle(paddleAngleY, accAngleY);
-								double accAngleZ = - Math.atan2(accX, accY)* 180 / Math.PI;
-								paddleAngleZ = SmoothAngle(paddleAngleZ, accAngleZ);
-							}
 
 							//Removing gravity from force vector and double integrating to determine change in position
 							double x = -paddleAngleX * Math.PI / 180,
@@ -566,46 +605,6 @@ public class MainActivity  extends BlunoLibrary {
 							Log.w("gottem", "a=" + accX + " " + accY + " " + accZ);
 
 
-							} else {
-								calibGyroX += gyroX;
-								calibGyroY += gyroY;
-								calibGyroZ += gyroZ;
-								calibAccX += accX;
-								calibAccY += accY;
-								calibAccZ += accZ;
-								++calibNumGyroPoints;
-							}
-						}
-
-					}
-						if (calibrating && calibTimer >= 3) {
-							averagePressure = calibPressure / calibNumPressurePoints;
-
-							averageGyroX = calibGyroX / calibNumGyroPoints;
-							averageGyroY = calibGyroY / calibNumGyroPoints;
-							averageGyroZ = calibGyroZ / calibNumGyroPoints;
-
-							paddleAngleX = 0;
-							paddleAngleY = 0;
-							paddleAngleZ = 0;
-
-							averageAccX = calibAccX / calibNumGyroPoints;
-							averageAccY = calibAccY / calibNumGyroPoints;
-							averageAccZ = calibAccZ / calibNumGyroPoints;
-
-							calibrating = false;
-						}
-
-
-						if (!calibrating)
-							graphXValue += deltaTime;
-
-				}
-
-		}
-		catch (NumberFormatException e) {
-			e.printStackTrace();
-		}
 	}*/
 
 	static double k = 0.98;
@@ -685,41 +684,55 @@ public class MainActivity  extends BlunoLibrary {
 
 
 	double timeReceived,
-			pressureReceived;
+			pressureReceived,
+			pressureReceivedLast,
+			pressureReceived2,
+			forceExertedTotal;
 	Vector3 accReceived = new Vector3(),
 			gyroReceived = new Vector3();
+	Vector3 waterAngleEnter = new Vector3(), waterAngleExit = new Vector3(),
+			averageWaterAngleEnter = new Vector3(), averageWaterAngleExit = new Vector3(),
+			sumWaterAngleEnter = new Vector3(), sumWaterAngleExit = new Vector3();
+	int waterAngleEnterN = 0, waterAngleExitN = 0;
+	double waterTimeEnter = 0, waterTimeExit = 0, waterTimeEnterLast, waterTimeExitLast,
+		strokeDuration, strokeFrequency;
+	boolean inWater = false;
 
 	private void parseReceived (String line, int position)
 	{
 		try {
 			if (line.length() > 0) {
-				Log.w("parse_received", "|" + line);
+				Log.w("parse_received", "[]" + line);
 				List<String> lineData = Arrays.asList(line.split(" "));
 				switch (line.charAt(0)) {
 					case 't':
 						if (lineData.size() > 1)
 							timeReceived = Double.parseDouble(lineData.get(1));
 
-						if (!calibrating) {
+						if (!calibrating)
+						{
 							DataPoint receivedPoint = new DataPoint(graphXValue, pressureReceived);
-							graphSeries[0].get(position).appendData(receivedPoint, (position == 0 ? scrollToEndOfGraph : false), numOfPoints);
+							graphSeries[0].get(position).appendData(receivedPoint, (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
+							graphSeries[1].get(position).appendData(new DataPoint(graphXValue,(paddleAngleX > 180 ? paddleAngleX -360 : (paddleAngleX < -180 ? paddleAngleX + 360 : paddleAngleX))), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
+							graphSeries[2].get(position).appendData(new DataPoint(graphXValue, (paddleAngleY > 180 ? paddleAngleY -360 : (paddleAngleY < -180 ? paddleAngleY + 360 : paddleAngleY))), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
+							graphSeries[3].get(position).appendData(new DataPoint(graphXValue, (paddleAngleZ > 180 ? paddleAngleZ -360 : (paddleAngleZ < -180 ? paddleAngleZ + 360 : paddleAngleZ))), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
 							if (position == 0 && recording)
 							{
 								recordPressureSeries.appendData(receivedPoint, scrollToEndOfGraph, numOfPoints);
-								recordAngleXSeries.appendData(new DataPoint(graphXValue, paddleAngleX), scrollToEndOfGraph, numOfPoints);
-								recordAngleYSeries.appendData(new DataPoint(graphXValue, paddleAngleY), scrollToEndOfGraph, numOfPoints);
-								recordAngleZSeries.appendData(new DataPoint(graphXValue, paddleAngleZ), scrollToEndOfGraph, numOfPoints);
+								recordAngleXSeries.appendData(new DataPoint(graphXValue, paddleAngleX), false, numOfPoints);
+								recordAngleYSeries.appendData(new DataPoint(graphXValue, paddleAngleY), false, numOfPoints);
+								recordAngleZSeries.appendData(new DataPoint(graphXValue, paddleAngleZ), false, numOfPoints);
 							}
 							graphXValue += timeReceived;
 
 							double k = 0.95;
-							paddleAngleX += (gyroReceived.x - averageGyroX) * timeReceived;
-							paddleAngleY += (gyroReceived.y - averageGyroY) * timeReceived;
-							paddleAngleZ += (gyroReceived.z - averageGyroZ) * timeReceived;
+							paddleAngleX -= (gyroReceived.x) * timeReceived;
+							paddleAngleY += (gyroReceived.y) * timeReceived;
+							paddleAngleZ += (gyroReceived.z) * timeReceived;
 
 							double forceMag = accReceived.len();
 							if (forceMag >= -20 && forceMag <= 20) {
-								double accAngleX = -Math.atan2(accReceived.y, accReceived.z) * 180 / Math.PI;
+								double accAngleX = -Math.atan2(-accReceived.y, accReceived.z) * 180 / Math.PI;
 								paddleAngleX = SmoothAngle(paddleAngleX, accAngleX);
 								double accAngleY;
 								if (accReceived.z != 0)
@@ -730,45 +743,79 @@ public class MainActivity  extends BlunoLibrary {
 								paddleAngleZ = SmoothAngle(paddleAngleZ, accAngleZ);
 							}
 
-							if (position == 0) {
-								graphSeries[1].get(0).appendData(new DataPoint(graphXValue, paddleAngleX), (position == 0 ? scrollToEndOfGraph : false), numOfPoints);
-								graphSeries[2].get(0).appendData(new DataPoint(graphXValue, paddleAngleY), (position == 0 ? scrollToEndOfGraph : false), numOfPoints);
-								graphSeries[3].get(0).appendData(new DataPoint(graphXValue, paddleAngleZ), (position == 0 ? scrollToEndOfGraph : false), numOfPoints);
-							}
 							if (selectedPosition == 0) {
 								ov.setAngles(paddleAngleX * Math.PI / 180, paddleAngleY * Math.PI / 180);
 								ov.invalidate();
 							}
 
+							String analyticsString = "";
+
+							double forceExerted = getDeltaForce(timeReceived, pressureReceived, pressureReceivedLast);
+							forceExertedTotal += forceExerted;
+							String forceString = ""+forceExerted,
+									totalForceString = "" + forceExertedTotal;
+							analyticsString += "Force Exerted: " + forceString + "V\n"
+									+ "Total Force Exerted: " + totalForceString + "V\n";
+
+							if (!inWater && pressureReceived > 4)
+							{
+								inWater = true;
+								waterAngleEnter = new Vector3(paddleAngleX, paddleAngleY, paddleAngleZ);
+								waterAngleEnterN++;
+								sumWaterAngleEnter.add(waterAngleEnter);
+								averageWaterAngleEnter = Vector3.div(sumWaterAngleEnter, waterAngleEnterN);
+								waterTimeEnter = graphXValue;
+								strokeFrequency = 1.0/(waterTimeEnter - waterTimeEnterLast);
+
+								waterTimeEnterLast = waterTimeEnter;
+							}
+							else if (inWater && pressureReceived < 4)
+							{
+								inWater = false;
+								waterAngleExit = new Vector3(paddleAngleX, paddleAngleY, paddleAngleZ);
+								waterAngleExitN++;
+								sumWaterAngleExit.add(waterAngleExit);
+								averageWaterAngleExit = Vector3.div(sumWaterAngleExit, waterAngleExitN);
+								waterTimeExit = graphXValue;
+								strokeDuration = waterTimeExit - waterTimeEnter;
+								strokeFrequency = (strokeFrequency + 1.0/(waterTimeExit - waterTimeExitLast))/2;
+
+								waterTimeExitLast = waterTimeExit;
+							}
+							analyticsString += "Last entering angle: " + String.format("%.2f", waterAngleEnter.x) + ", " + String.format("%.2f", waterAngleEnter.y) + ", " + String.format("%.2f", waterAngleEnter.x) + "\n" +
+									"Average entering angle: " + String.format("%.2f", averageWaterAngleEnter.x) + ", " + String.format("%.2f", averageWaterAngleEnter.y) + ", " + String.format("%.2f", averageWaterAngleEnter.z) + "\n";
+							analyticsString += "Last exiting angle: " + String.format("%.2f", waterAngleExit.x) + ", " + String.format("%.2f", waterAngleExit.y) + ", " + String.format("%.2f", waterAngleExit.z) + "\n" +
+									"Average exiting angle: " + String.format("%.2f", averageWaterAngleExit.x) + ", " + String.format("%.2f", averageWaterAngleExit.y) + ", " + String.format("%.2f", averageWaterAngleExit.z) + "\n";
+							analyticsString += "Last stroke duration: " + String.format("%.2f", strokeDuration) + "s\n";
+							analyticsString += "Last stroke frequency: " + strokeFrequency;//String.format("%.2f", strokeFrequency) + "s^-1\n";
+
+							pressureReceivedLast = pressureReceived;
+
+							if (selectedPosition == 0)
+								analyticsTextView.setText(analyticsString);
 
 						} else {
 							calibTimer += timeReceived;
 
 							calibPressure += pressureReceived;
-							++calibNumPressurePoints;
+							calibPressure += pressureReceived2;
+							++calibNumPoints;
 
 							calibGyroX += gyroReceived.x;
 							calibGyroY += gyroReceived.y;
 							calibGyroZ += gyroReceived.z;
-							calibAccX += accReceived.x;
-							calibAccY += accReceived.y;
-							calibAccZ += accReceived.z;
-							++calibNumGyroPoints;
 
 							if (calibTimer >= 3) {
-								averagePressure = calibPressure / calibNumPressurePoints;
+								averagePressure = calibPressure / calibNumPoints;
+								averagePressure2 = calibPressure2 / calibNumPoints;
 
-								averageGyroX = calibGyroX / calibNumGyroPoints;
-								averageGyroY = calibGyroY / calibNumGyroPoints;
-								averageGyroZ = calibGyroZ / calibNumGyroPoints;
+								averageGyroX = calibGyroX / calibNumPoints;
+								averageGyroY = calibGyroY / calibNumPoints;
+								averageGyroZ = calibGyroZ / calibNumPoints;
 
 								paddleAngleX = 0;
 								paddleAngleY = 0;
 								paddleAngleZ = 0;
-
-								averageAccX = calibAccX / calibNumGyroPoints;
-								averageAccY = calibAccY / calibNumGyroPoints;
-								averageAccZ = calibAccZ / calibNumGyroPoints;
 
 								calibrating = false;
 							}
@@ -777,7 +824,11 @@ public class MainActivity  extends BlunoLibrary {
 						break;
 					case 'p':
 						if (lineData.size() > 1)
-							pressureReceived = Double.parseDouble(lineData.get(1));
+							pressureReceived = Double.parseDouble(lineData.get(1)) - (calibrating ? 0 : averagePressure);
+						break;
+					case 'q':
+						if (lineData.size() > 1)
+							pressureReceived2 = Double.parseDouble(lineData.get(1)) - (calibrating ? 0 : averagePressure2);
 						break;
 					case 'a':
 						if (lineData.size() > 3) {
@@ -788,9 +839,9 @@ public class MainActivity  extends BlunoLibrary {
 						break;
 					case 'g':
 						if (lineData.size() > 3) {
-							gyroReceived.x = Double.parseDouble(lineData.get(1));
-							gyroReceived.y = Double.parseDouble(lineData.get(2));
-							gyroReceived.z = Double.parseDouble(lineData.get(3));
+							gyroReceived.x = Double.parseDouble(lineData.get(1)) - (calibrating ? 0 : averageGyroX);
+							gyroReceived.y = Double.parseDouble(lineData.get(2)) - (calibrating ? 0 : averageGyroY);
+							gyroReceived.z = Double.parseDouble(lineData.get(3)) - (calibrating ? 0 : averageGyroZ);
 						}
 						break;
 					default:
@@ -801,8 +852,27 @@ public class MainActivity  extends BlunoLibrary {
 		}
 		catch(Exception e)
 		{
-
+			e.printStackTrace();
 		}
+	}
+
+	public double getDeltaForce(double deltaTime, double force, double lastForce)
+	{
+		return (force + lastForce) / 2 * deltaTime;
+	}
+
+	public Vector3 averageAngles(Vector3[] angles)
+	{
+		Vector3 sum = new Vector3();
+		for(Vector3 v : angles)
+			sum.add(v);
+		sum.div(angles.length);
+		return sum;
+	}
+
+	public void updateAnalyticsText(String analyticsString)
+	{
+		analyticsTextView.setText(analyticsString);
 	}
 
 
@@ -824,23 +894,48 @@ public class MainActivity  extends BlunoLibrary {
 
 	private boolean writeToDataFile(ArrayList<String> data, String fileName)
 	{
+		File parentFolder = null;
+		File outFile = null;
+		boolean fileWorked = true;
 		try
 		{
-			File parentFolder = getDir("dataset", MODE_PRIVATE);
-			File outFile = new File(parentFolder, fileName + ".txt");
+			parentFolder = getDir("dataset", MODE_PRIVATE);
+			outFile = new File(parentFolder, fileName + ".txt");
 			FileOutputStream fos = new FileOutputStream(outFile);
 			for(int i = 0; i < data.size(); i++)
 				fos.write((data.get(i) + "\n").getBytes());
 			fos.close();
 			Log.w("Writing", "Writing to data log file");
-			return true;
+			fileWorked = true;
 		}
 		catch (IOException e)
 		{
 			Log.w("Exception", "Error writing to file: " + e.toString());
 			e.printStackTrace();
-			return false;
+			fileWorked =  false;
+			Toast mrT = Toast.makeText(MainActivity.this, "Could not create file with the selected name. Please try again with a different file name", Toast.LENGTH_LONG);;
+			mrT.setGravity(Gravity.TOP, 0, 0);
+			mrT.show();
 		}
+
+		try
+		{
+			uploadWithTransferUtility(outFile);
+			fileWorked = true;
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+			fileWorked = false;
+			Toast mrT = Toast.makeText(MainActivity.this, "Failed to upload the file to the cloud server", Toast.LENGTH_LONG);;
+			mrT.setGravity(Gravity.TOP, 0, 0);
+			mrT.show();
+		}
+		return fileWorked;
+
+
+
+
 	}
 
 	private ArrayList<String> readFromDataFile(String fileName)
@@ -893,4 +988,118 @@ public class MainActivity  extends BlunoLibrary {
 		adp1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 		dataSelectionSpinner.setAdapter(adp1);
 	}
+
+	public void uploadWithTransferUtility(File file) {
+
+		TransferUtility transferUtility =
+				TransferUtility.builder()
+						.context(getApplicationContext())
+						.awsConfiguration(AWSMobileClient.getInstance().getConfiguration())
+						.s3Client(new AmazonS3Client(AWSMobileClient.getInstance()))
+						.build();
+
+
+		TransferObserver uploadObserver =
+				transferUtility.upload(
+						AWSMobileClient.getInstance().getIdentityId()+"/"+file.getName(),
+						file);
+
+		// Attach a listener to the observer to get state update and progress notifications
+		uploadObserver.setTransferListener(new TransferListener() {
+
+			@Override
+			public void onStateChanged(int id, TransferState state) {
+				if (TransferState.COMPLETED == state) {
+					Log.w("AWS", "uploaded file");
+				}
+			}
+
+			@Override
+			public void onProgressChanged(int id, long bytesCurrent, long bytesTotal) {
+				float percentDonef = ((float) bytesCurrent / (float) bytesTotal) * 100;
+				int percentDone = (int)percentDonef;
+
+				Log.d("AWS", "ID:" + id + " bytesCurrent: " + bytesCurrent
+						+ " bytesTotal: " + bytesTotal + " " + percentDone + "%");
+			}
+
+			@Override
+			public void onError(int id, Exception ex) {
+				Log.w("AWS", ex);
+			}
+
+		});
+
+		// If you prefer to poll for the data, instead of attaching a
+		// listener, check for the state and progress in the observer.
+		if (TransferState.COMPLETED == uploadObserver.getState()) {
+			// Handle a completed upload.
+		}
+
+		Log.d("AWS", "Bytes Transferred: " + uploadObserver.getBytesTransferred());
+		Log.d("AWS", "Bytes Total: " + uploadObserver.getBytesTotal());
+	}
+
+
+
+    private void downloadWithTransferUtility(String fileName) {
+
+        TransferUtility transferUtility =
+                TransferUtility.builder()
+                        .context(getApplicationContext())
+                        .awsConfiguration(AWSMobileClient.getInstance().getConfiguration())
+                        .s3Client(new AmazonS3Client(AWSMobileClient.getInstance().getCredentialsProvider()))
+                        .build();
+
+		//str.substring(0, str.length() - 1)
+        File parentFolder = getDir("dataset", MODE_PRIVATE);
+        File file = new File(parentFolder, fileName.substring(0, fileName.length() - 4) + ".cloud.txt");
+
+        // Initiate the download
+        //TransferObserver observer = transferUtility.download(AWSMobileClient.getInstance().getIdentityId()+"/"+fileName, file);
+
+
+		Log.w("AWS", "trying to get: " + AWSMobileClient.getInstance().getIdentityId()+"/"+fileName);
+
+        TransferObserver downloadObserver =
+                transferUtility.download(
+                        AWSMobileClient.getInstance().getIdentityId()+"/"+fileName,
+                        file);
+
+        // Attach a listener to the observer to get state update and progress notifications
+        downloadObserver.setTransferListener(new TransferListener() {
+
+            @Override
+            public void onStateChanged(int id, TransferState state) {
+                if (TransferState.COMPLETED == state) {
+					Log.w("AWS", "fileDownloaded ");
+                }
+            }
+
+            @Override
+            public void onProgressChanged(int id, long bytesCurrent, long bytesTotal) {
+                float percentDonef = ((float)bytesCurrent/(float)bytesTotal) * 100;
+                int percentDone = (int)percentDonef;
+
+                Log.d("AWS", "   ID:" + id + "   bytesCurrent: " + bytesCurrent + "   bytesTotal: " + bytesTotal + " " + percentDone + "%");
+            }
+
+            @Override
+            public void onError(int id, Exception ex) {
+				Log.w("AWS", ex);
+            }
+
+        });
+
+        // If you prefer to poll for the data, instead of attaching a
+        // listener, check for the state and progress in the observer.
+        if (TransferState.COMPLETED == downloadObserver.getState()) {
+            // Handle a completed upload.
+
+        }
+
+        Log.d("AWS", "Bytes Transferrred: " + downloadObserver.getBytesTransferred());
+        Log.d("AWS", "Bytes Total: " + downloadObserver.getBytesTotal());
+    }
+
 }

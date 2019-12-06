@@ -27,17 +27,21 @@ PackageManager.hasSystemFeature(FEATURE_BLUETOOTH_LE) -->
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Paddle_Proj"
+        android:icon="@mipmap/icon"
+        android:label="Project_Paddle"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+
+        >
+
 
 
 
         <activity
             android:name=".LaunchScreen"
             android:screenOrientation="portrait"
-            android:label="@string/app_name">
+
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -47,7 +51,9 @@ PackageManager.hasSystemFeature(FEATURE_BLUETOOTH_LE) -->
 
         <activity
             android:name=".MainActivity"
-            android:label="Project_Paddle"
+
+            android:screenOrientation="portrait"
+
             ></activity>
         <activity
             android:name=".AuthenticationActivity"
