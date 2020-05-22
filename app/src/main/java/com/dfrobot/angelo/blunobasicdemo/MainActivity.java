@@ -38,6 +38,7 @@ import android.widget.Spinner;
 import android.widget.TableLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.hardware.*;
 
 import com.amazonaws.mobile.client.AWSMobileClient;
 import com.amazonaws.mobile.client.Callback;
@@ -70,7 +71,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity  extends BlunoLibrary {
+public class MainActivity  extends BlunoLibrary  implements SensorEventListener{
+	private SensorManager sensorManager;
+	private Vector3 phoneAcceleration;
 
 	private Button buttonScan;
 	private TextView analyticsTextView;
@@ -89,7 +92,6 @@ public class MainActivity  extends BlunoLibrary {
 	private GraphView pressureGraph, rotationGraph;
 	private GraphView transGraph;
 	private ArrayList<LineGraphSeries<DataPoint>>[] graphSeries;
-	private ArrayList<DataPoint> allGraphSeries;
 	private double graphXValue = 0;
 	private int selectedPosition = 0;
 
@@ -104,6 +106,8 @@ public class MainActivity  extends BlunoLibrary {
 	int displayedView = 0;
 	private TableLayout displayTable,
 		analyticsTable;
+
+	private double recordingTimer = 0;
 
 	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 		switch (requestCode) {
@@ -454,7 +458,6 @@ public class MainActivity  extends BlunoLibrary {
 			@Override
 			public void onClick(View view)
 			{
-				updateSpinnerList();
 				String name = dataSelectionSpinner.getSelectedItem().toString();
 				if (dataSelectionSpinner.getSelectedItemPosition() != 0) {
 					new AlertDialog.Builder(MainActivity.this).setTitle("Are you sure you want to delete \"" + name + "\" forever?")
@@ -508,6 +511,24 @@ public class MainActivity  extends BlunoLibrary {
 
 		displayTable = findViewById(R.id.display_layout);
 		analyticsTable = findViewById(R.id.analytics_layout);
+
+
+		sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+		sensorManager.registerListener(this, sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor arg0, int arg1)
+	{
+	}
+
+	@Override
+	public void onSensorChanged(SensorEvent event)
+	{
+		if (event.sensor.getType()==Sensor.TYPE_ACCELEROMETER)
+		{
+			phoneAcceleration = new Vector3(event.values[0], event.values[1], event.values[2]);
+		}
 	}
 
 
@@ -555,57 +576,6 @@ public class MainActivity  extends BlunoLibrary {
 		calibPressure = 0;
 		calibPressure2 = 0;
 	}
-
-	private double[][] mulMatrix(double[][] m1, double[][] m2)
-	{
-		double[][] result = new double[3][3];
-		for(int i = 0; i < 3; i++)
-			for(int j = 0; j< 3; j++)
-			{
-				double sum = 0;
-				for (int k = 0; k < 3; k++)
-					sum += m1[i][k] * m2[k][j];
-				result[i][j] = sum;
-			}
-		return result;
-	}
-
-
-/*
-
-							//Removing gravity from force vector and double integrating to determine change in position
-							double x = -paddleAngleX * Math.PI / 180,
-									y = paddleAngleZ * Math.PI / 180,
-									z = -paddleAngleY * Math.PI / 180;
-							double [][] matX = new double[][]
-									{
-											{1, 0, 0},
-											{0, Math.cos(x), Math.sin(x)},
-											{0, -Math.sin(x), Math.cos(x)}
-									},
-								matY = new double[][]
-										{
-												{Math.cos(y), 0, -Math.sin(y)},
-												{0, 1, 0},
-												{Math.sin(y), 0, Math.cos(y)}
-										},
-								matZ = new double[][]
-										{
-												{Math.cos(z), Math.sin(z), 0},
-												{-Math.sin(z), Math.cos(z), 0},
-												{0, 0, 1}
-										},
-								axes = new double[][]{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-
-							axes = mulMatrix(axes, matX);
-							axes = mulMatrix(axes, matY);
-							axes = mulMatrix(axes, matZ);
-
-							Log.w("gottem", "g=" + axes[1][0]*9.8 + " "  +  axes[1][2]*9.8 + " " + axes[1][1]*9.8);
-							Log.w("gottem", "a=" + accX + " " + accY + " " + accZ);
-
-
-	}*/
 
 	static double k = 0.98;
 	public static double SmoothAngle(double gyroAngle, double accAngle)
@@ -697,6 +667,10 @@ public class MainActivity  extends BlunoLibrary {
 	double waterTimeEnter = 0, waterTimeExit = 0, waterTimeEnterLast, waterTimeExitLast,
 		strokeDuration, strokeFrequency;
 	boolean inWater = false;
+	double averageOutwardAngle = 0, sumOutwardAngle = 0;
+	int averageOutwardAngleN = 0;
+
+	//recording timer, avg outward angle from boat
 
 	private void parseReceived (String line, int position)
 	{
@@ -713,7 +687,7 @@ public class MainActivity  extends BlunoLibrary {
 						{
 							DataPoint receivedPoint = new DataPoint(graphXValue, pressureReceived);
 							graphSeries[0].get(position).appendData(receivedPoint, (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
-							graphSeries[1].get(position).appendData(new DataPoint(graphXValue,(paddleAngleX > 180 ? paddleAngleX -360 : (paddleAngleX < -180 ? paddleAngleX + 360 : paddleAngleX))), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
+							graphSeries[1].get(position).appendData(new DataPoint(graphXValue, paddleAngleX/*(paddleAngleX > 180 ? paddleAngleX -360 : (paddleAngleX < -180 ? paddleAngleX + 360 : paddleAngleX))*/), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
 							graphSeries[2].get(position).appendData(new DataPoint(graphXValue, (paddleAngleY > 180 ? paddleAngleY -360 : (paddleAngleY < -180 ? paddleAngleY + 360 : paddleAngleY))), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
 							graphSeries[3].get(position).appendData(new DataPoint(graphXValue, (paddleAngleZ > 180 ? paddleAngleZ -360 : (paddleAngleZ < -180 ? paddleAngleZ + 360 : paddleAngleZ))), (selectedPosition == 0 ? scrollToEndOfGraph : false), numOfPoints);
 							if (position == 0 && recording)
@@ -724,6 +698,9 @@ public class MainActivity  extends BlunoLibrary {
 								recordAngleZSeries.appendData(new DataPoint(graphXValue, paddleAngleZ), false, numOfPoints);
 							}
 							graphXValue += timeReceived;
+							if (recording)
+							    recordingTimer += timeReceived;
+							else recordingTimer = 0;
 
 							double k = 0.95;
 							paddleAngleX -= (gyroReceived.x) * timeReceived;
@@ -744,11 +721,12 @@ public class MainActivity  extends BlunoLibrary {
 							}
 
 							if (selectedPosition == 0) {
-								ov.setAngles(paddleAngleX * Math.PI / 180, paddleAngleY * Math.PI / 180);
+								ov.setAngles(paddleAngleX * Math.PI / 180, -paddleAngleY * Math.PI / 180);
 								ov.invalidate();
 							}
 
 							String analyticsString = "";
+                            analyticsString += "Recording for " + getTimeString(recordingTimer) + "\n";
 
 							double forceExerted = getDeltaForce(timeReceived, pressureReceived, pressureReceivedLast);
 							forceExertedTotal += forceExerted;
@@ -787,7 +765,8 @@ public class MainActivity  extends BlunoLibrary {
 							analyticsString += "Last exiting angle: " + String.format("%.2f", waterAngleExit.x) + ", " + String.format("%.2f", waterAngleExit.y) + ", " + String.format("%.2f", waterAngleExit.z) + "\n" +
 									"Average exiting angle: " + String.format("%.2f", averageWaterAngleExit.x) + ", " + String.format("%.2f", averageWaterAngleExit.y) + ", " + String.format("%.2f", averageWaterAngleExit.z) + "\n";
 							analyticsString += "Last stroke duration: " + String.format("%.2f", strokeDuration) + "s\n";
-							analyticsString += "Last stroke frequency: " + strokeFrequency;//String.format("%.2f", strokeFrequency) + "s^-1\n";
+							analyticsString += "Last stroke frequency: " + String.format("%.2f", strokeFrequency) + "s^-1\n";
+                            analyticsString += "Average outward angle: " + String.format("%.2f", (averageWaterAngleEnter.x + averageWaterAngleExit.x) / 2) + " degrees";
 
 							pressureReceivedLast = pressureReceived;
 
@@ -892,6 +871,27 @@ public class MainActivity  extends BlunoLibrary {
 		}
 	}
 
+	private String getTimeString(double time)
+	{
+		int d = 0, h = 0, m = 0, s = 0;
+		s = (int)(time % 60);
+		if (time >= 60)
+		{
+			m = (int)(time / 60);
+			if (m >= 60)
+			{
+				h = m / 60;
+				m = m % 60;
+				if (h >= 24)
+				{
+					d = h / 24;
+					h = h % 24;
+				}
+			}
+		}
+		return (d > 0 ? d + " day" + (d>1?"s,":",") : "") + (h > 0 ? " " + h + " hour"+(h>1?"s,":",") : "") + (m > 0 ? " " + m + " minute"+(m>1?"s,":",") : "") + " " + s + " second"+(s>1?"s":"");
+	}
+
 	private boolean writeToDataFile(ArrayList<String> data, String fileName)
 	{
 		File parentFolder = null;
@@ -986,7 +986,8 @@ public class MainActivity  extends BlunoLibrary {
 		ArrayAdapter<String> adp1 = new ArrayAdapter<>(this,
 				android.R.layout.simple_list_item_1, spinnerList);
 		adp1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-		dataSelectionSpinner.setAdapter(adp1);
+		if (!adp1.equals(dataSelectionSpinner.getAdapter()))
+			dataSelectionSpinner.setAdapter(adp1);
 	}
 
 	public void uploadWithTransferUtility(File file) {
