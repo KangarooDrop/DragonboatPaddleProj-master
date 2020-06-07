@@ -71,13 +71,19 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-public class MainActivity  extends BlunoLibrary  implements SensorEventListener{
+public class MainActivity  extends BlunoLibrary  implements SensorEventListener
+{
+	/*  Variables responsible for acquireing and storing the accelerometer data from phone on which the app is running  */
 	private SensorManager sensorManager;
 	private Vector3 phoneAcceleration;
 
+	/*  Reference varialbe for the button which allows the user to connect to the Bluno and displays the status to the user  */
 	private Button buttonScan;
+
+	/*  View responsible for displaying analytical information in the for of text strings to the user  */
 	private TextView analyticsTextView;
 
+	/*  Variables responsible for determining when the recording was initialized and ended as well as the data to be saved  */
 	private double startRecordTime = -1;
 	private double stopRecordTime = -1;
 	private LineGraphSeries<DataPoint> recordPressureSeries = new LineGraphSeries<>();
@@ -85,29 +91,31 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener{
 	private LineGraphSeries<DataPoint> recordAngleYSeries = new LineGraphSeries<>();
 	private LineGraphSeries<DataPoint> recordAngleZSeries = new LineGraphSeries<>();
 	private boolean recording = false;
+	private double recordingTimer = 0;
 
+	/*  Variables for controlling the drop-down menu and its contents  */
 	private Spinner dataSelectionSpinner;
 	ArrayList<String> spinnerList = new ArrayList<>();
 
-	private GraphView pressureGraph, rotationGraph;
-	private GraphView transGraph;
-	private ArrayList<LineGraphSeries<DataPoint>>[] graphSeries;
-	private double graphXValue = 0;
 	private int selectedPosition = 0;
 
+	/*  Variables for the displaying the graph information to the user and storing the data displayed  */
+	private GraphView pressureGraph, rotationGraph;
+	private ArrayList<LineGraphSeries<DataPoint>>[] graphSeries;
+	private double graphXValue = 0;
 	private int numOfPoints = 511;
-
-	private OrientationViewer ov;
-
 	private boolean scrollToEndOfGraph = true;
 
-	private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
+	/*  Varialbe for the view which displays the paddle angles to the user  */
+	private OrientationViewer ov;
 
+	/*  Variables for controlling which views are visible to the user  */
 	int displayedView = 0;
 	private TableLayout displayTable,
 		analyticsTable;
 
-	private double recordingTimer = 0;
+
+	private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
 
 	public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
 		switch (requestCode) {
@@ -146,6 +154,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener{
 
 		pressureGraph = findViewById(R.id.graph);
 		rotationGraph = findViewById(R.id.graph2);
+		/*  Initializing the graph series with empty data, setting appropriate colors, and setting bounds  */
 		graphSeries = new ArrayList[4];
 		for(int i = 0; i < 4; i++) {
 			graphSeries[i] = new ArrayList<>();
