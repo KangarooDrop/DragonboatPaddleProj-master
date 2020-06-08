@@ -184,7 +184,8 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginTop="4dp"
-            android:text="Analytics" />
+            android:text="Analytics"
+            android:visibility="invisible"/>
 
         <com.jjoe64.graphview.GraphView
             android:id="@+id/graph"
