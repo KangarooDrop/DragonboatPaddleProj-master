@@ -149,14 +149,11 @@
             android:id="@+id/orient_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"
             android:layout_marginStart="8dp"
             android:layout_marginTop="4dp" />
 
         <com.jjoe64.graphview.GraphView
             android:id="@+id/graph2"
-            android:layout_below="@+id/orient_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
@@ -184,15 +181,12 @@
             android:id="@+id/analytics_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"
             android:layout_marginStart="8dp"
             android:layout_marginTop="4dp"
             android:text="Analytics" />
 
         <com.jjoe64.graphview.GraphView
             android:id="@+id/graph"
-            android:layout_below="@+id/analytics_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
