@@ -804,7 +804,8 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 									"Average exiting angle: " + String.format("%.2f", averageWaterAngleExit.x) + ", " + String.format("%.2f", averageWaterAngleExit.y) + ", " + String.format("%.2f", averageWaterAngleExit.z) + "\n";
 							analyticsString += "Last stroke duration: " + String.format("%.2f", strokeDuration) + "s\n";
 							analyticsString += "Last stroke frequency: " + String.format("%.2f", strokeFrequency) + "s^-1\n";
-                            analyticsString += "Average outward angle: " + String.format("%.2f", (averageWaterAngleEnter.x + averageWaterAngleExit.x) / 2) + " degrees";
+                            analyticsString += "Average outward angle: " + String.format("%.2f", (averageWaterAngleEnter.x + averageWaterAngleExit.x) / 2) + " degrees\n";
+                            analyticsString += "Velocity of the phone: (" + String.format("%.2f", phoneAcceleration.x) + ", " + String.format("%.2f", phoneAcceleration.y) + ", " + String.format("%.2f", phoneAcceleration.z) + ")\n";
 
 							pressureReceivedLast = pressureReceived;
 
