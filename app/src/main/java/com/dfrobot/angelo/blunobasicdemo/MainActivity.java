@@ -626,15 +626,22 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 	{
 		if ((accAngle+360-gyroAngle) < (gyroAngle - accAngle) && (gyroAngle - accAngle) >= 0)
 		{
-				return Lerp(gyroAngle, accAngle + 360, k) % 360;
+				return Lerp(accAngle + 360, gyroAngle, k) % 360;
 		}
 		else if ((gyroAngle+360-accAngle) < (accAngle - gyroAngle) && (accAngle - gyroAngle) >= 0)
 		{
-			return Lerp(gyroAngle + 360, accAngle, k) % 360;
+			return Lerp(accAngle, gyroAngle + 360, k) % 360;
 		}
 		return Lerp(gyroAngle, accAngle, k);
 	}
 
+	/*
+	 * Purpose: Gives a linear interpolation between two scalars by the given weight
+	 * Input: a = scalar returned when t = 0
+	 * 			b = scalar returned when t = 1
+	 * 			t = the weight between 0 and 1 of the two scalars
+	 * Output: linear interpolation between a and b by t
+	 * */
 	public static double Lerp(double a, double b, double t)
 	{
 		return (b - a) * t;
