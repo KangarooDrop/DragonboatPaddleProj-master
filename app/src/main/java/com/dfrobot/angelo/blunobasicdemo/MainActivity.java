@@ -159,7 +159,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 	int averageOutwardAngleN = 0;
 
 	/*    */
-	static double k = 0.98;
+	static double k = 0.02;
 
 	private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
 
@@ -637,7 +637,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 
 	public static double Lerp(double a, double b, double t)
 	{
-		return a * t + b * (1-t);
+		return (b - a) * t;
 	}
 
 	@Override
@@ -734,7 +734,6 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 							    recordingTimer += timeReceived;
 							else recordingTimer = 0;
 
-							double k = 0.95;
 							paddleAngleX -= (gyroReceived.x) * timeReceived;
 							paddleAngleY += (gyroReceived.y) * timeReceived;
 							paddleAngleZ += (gyroReceived.z) * timeReceived;
