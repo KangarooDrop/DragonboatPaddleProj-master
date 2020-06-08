@@ -114,6 +114,52 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 	private TableLayout displayTable,
 		analyticsTable;
 
+	/*  Variables used in calibrating the incoming sensor data from the Bluno; accumulation of all sensor inputs  */
+	private boolean calibrating = false;
+	private int calibNumPoints = 0;
+	private double calibTimer = 0;
+	private double calibGyroX = 0,
+			calibGyroY = 0,
+			calibGyroZ = 0;
+	private double calibPressure = 0,
+			calibPressure2 = 0;
+
+	/*  Variables used after calibration to offset incoming data back to zero  */
+	private double paddleAngleX = 0,
+			paddleAngleY = 0,
+			paddleAngleZ = 0;
+	private double averageAccX = 0,
+			averageAccY = 0,
+			averageAccZ = 0;
+	private double averageGyroX = 0,
+			averageGyroY = 0,
+			averageGyroZ = 0;
+	private double averagePressure,
+			averagePressure2;
+
+	/*  Variable used by onSerialReceived to ensure no data is lost when the input data is segmented between different calls of onSerialReceived  */
+	String wholeLine = "";
+
+	/*  Variables used to store information about the information received from the Bluno and analytic info displayed in the view  */
+	double timeReceived,
+			pressureReceived,
+			pressureReceivedLast,
+			pressureReceived2,
+			forceExertedTotal;
+	Vector3 accReceived = new Vector3(),
+			gyroReceived = new Vector3();
+	Vector3 waterAngleEnter = new Vector3(), waterAngleExit = new Vector3(),
+			averageWaterAngleEnter = new Vector3(), averageWaterAngleExit = new Vector3(),
+			sumWaterAngleEnter = new Vector3(), sumWaterAngleExit = new Vector3();
+	int waterAngleEnterN = 0, waterAngleExitN = 0;
+	double waterTimeEnter = 0, waterTimeExit = 0, waterTimeEnterLast, waterTimeExitLast,
+			strokeDuration, strokeFrequency;
+	boolean inWater = false;
+	double averageOutwardAngle = 0, sumOutwardAngle = 0;
+	int averageOutwardAngleN = 0;
+
+	/*    */
+	static double k = 0.98;
 
 	private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
 
@@ -529,8 +575,14 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 	@Override
 	public void onAccuracyChanged(Sensor arg0, int arg1)
 	{
+
 	}
 
+	/*
+	 * Purpose: Called when there is a new sensor input and updates the values of phoneAcceleration based on the received acceleration of the phone
+	 * Input: event = the SensorEvent
+	 * Output: None
+	 * */
 	@Override
 	public void onSensorChanged(SensorEvent event)
 	{
@@ -539,34 +591,12 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 			phoneAcceleration = new Vector3(event.values[0], event.values[1], event.values[2]);
 		}
 	}
-
-
-	private boolean calibrating = false;
-	private double calibTimer = 0;
-
-	private double calibGyroX = 0,
-			calibGyroY = 0,
-			calibGyroZ = 0;
-	private int calibNumPoints = 0;
-
-	private double calibPressure = 0,
-			calibPressure2 = 0;
-
-	private double paddleAngleX = 0,
-			paddleAngleY = 0,
-			paddleAngleZ = 0;
-
-	private double averageAccX = 0,
-			averageAccY = 0,
-			averageAccZ = 0;
-
-	private double averageGyroX = 0,
-			averageGyroY = 0,
-			averageGyroZ = 0,
-
-	averagePressure,
-	averagePressure2;
-
+	/*
+	 * Purpose: Initializes variables needed to calibrate the sensor input;
+	 * 			calibration is performed automatically upon call of parseReceived after calibration call
+	 * Input: None
+	 * Output: None
+	 * */
 	private void calibrate()
 	{
 		forceExertedTotal = 0;
@@ -586,7 +616,12 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		calibPressure2 = 0;
 	}
 
-	static double k = 0.98;
+	/*
+	 * Purpose: Lerps a single axis of the hyroscopic and acceleration angles received based on field k
+	 * Input: gyroAngle = the angle of the device obtained by the accumulation of the gyroscopic changes
+	 *			accAngle = the angle of the device as observed from the accelerometer's gravitational pull
+	 * Output: the lerp of the two angles
+	 * */
 	public static double SmoothAngle(double gyroAngle, double accAngle)
 	{
 		if ((accAngle+360-gyroAngle) < (gyroAngle - accAngle) && (gyroAngle - accAngle) >= 0)
@@ -640,7 +675,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 
 	@Override
 	public void onConectionStateChange(connectionStateEnum theConnectionState) {//Once connection state changes, this function will be called
-		switch (theConnectionState) {											//Four connection state
+		switch (theConnectionState) {                                            //Four connection state
 			case isConnected:
 				buttonScan.setText("Connected");
 				break;
@@ -661,26 +696,14 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		}
 	}
 
-
-	double timeReceived,
-			pressureReceived,
-			pressureReceivedLast,
-			pressureReceived2,
-			forceExertedTotal;
-	Vector3 accReceived = new Vector3(),
-			gyroReceived = new Vector3();
-	Vector3 waterAngleEnter = new Vector3(), waterAngleExit = new Vector3(),
-			averageWaterAngleEnter = new Vector3(), averageWaterAngleExit = new Vector3(),
-			sumWaterAngleEnter = new Vector3(), sumWaterAngleExit = new Vector3();
-	int waterAngleEnterN = 0, waterAngleExitN = 0;
-	double waterTimeEnter = 0, waterTimeExit = 0, waterTimeEnterLast, waterTimeExitLast,
-		strokeDuration, strokeFrequency;
-	boolean inWater = false;
-	double averageOutwardAngle = 0, sumOutwardAngle = 0;
-	int averageOutwardAngleN = 0;
-
-	//recording timer, avg outward angle from boat
-
+	/*
+	 * Purpose: Processes a single data entry;
+	 * 			if not calibrating, updates the paddle data fields with the received data, updates orientation view, and updates analytic data and view
+	 * 			if calibrating, updates the calibration fields
+	 * Input: line = the line to be parsed (ex. "p 152")
+	 * 			position = the element of graphSeries that is to be appended to with the received data
+	 * Output: None
+	 * */
 	private void parseReceived (String line, int position)
 	{
 		try {
@@ -844,11 +867,24 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		}
 	}
 
+	/*
+	 * Purpose: Calculates the total amount of force exterted over the timestep;
+	 * 			Function is more accurate with lower deltaTime and higher number of calls
+	 * Input: deltaTime = the amount of time that's elapsed since the last function call
+	 * 			force = the amount of force being exerted at function call
+	 * 			lastForce = the amount of force exerted at last function call
+	 * Output: the total amount of force that has been exerted over the given period of time
+	 * */
 	public double getDeltaForce(double deltaTime, double force, double lastForce)
 	{
 		return (force + lastForce) / 2 * deltaTime;
 	}
 
+	/*
+	 * Purpose: Computes the mean of an array of Vector3
+	 * Input: angles = the array of Vector3
+	 * Output: the mean of the array
+	 * */
 	public Vector3 averageAngles(Vector3[] angles)
 	{
 		Vector3 sum = new Vector3();
@@ -858,14 +894,22 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		return sum;
 	}
 
+	/*
+	 * Purpose: Updating the text of the view containing analytic data
+	 * Input: analyticsString = the string to be set as the text data for the view
+	 * Output: None
+	 * */
 	public void updateAnalyticsText(String analyticsString)
 	{
 		analyticsTextView.setText(analyticsString);
 	}
 
-
-
-	String wholeLine = "";
+	/*
+	 * Purpose: Function call when the app receives data from the bluetooth source
+	 * 				Runs through each character of the line recording each until a sentinel character is observed then calls parseReceived on the recorded data before resetting and repeating
+	 * Input: line = the data received from the bluetooth source
+	 * Output: None
+	 * */
 	@Override
 	public void onSerialReceived(String line)
 	{
@@ -880,6 +924,11 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		}
 	}
 
+	/*
+	 * Purpose: Converts from total number of seconds to an English representation in days, hours, minutes, seconds
+	 * Input: time = the elapsed time in seconds to convert
+	 * Output: A string where the time is in terms X day(s), Y hour(s), Z minute(s), W second(s) (omitting if any are equal to zero)
+	 * */
 	private String getTimeString(double time)
 	{
 		int d = 0, h = 0, m = 0, s = 0;
@@ -901,6 +950,12 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		return (d > 0 ? d + " day" + (d>1?"s,":",") : "") + (h > 0 ? " " + h + " hour"+(h>1?"s,":",") : "") + (m > 0 ? " " + m + " minute"+(m>1?"s,":",") : "") + " " + s + " second"+(s>1?"s":"");
 	}
 
+	/*
+	 * Purpose: Creates a new file with each element of data being a new line
+	 * Input: data = a list of strings representing the data at each timestep
+	 * 			fileName = the name of the file(no path, no extension)
+	 * Output: A list of strings containing raw data for each timestep
+	 * */
 	private boolean writeToDataFile(ArrayList<String> data, String fileName)
 	{
 		File parentFolder = null;
@@ -941,12 +996,13 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 			mrT.show();
 		}
 		return fileWorked;
-
-
-
-
 	}
 
+	/*
+	 * Purpose: Retrieves the raw data within the requested file
+	 * Input: fileName = the name of the file(no path, no extension)
+	 * Output: A list of strings containing raw data for each timestep
+	 * */
 	private ArrayList<String> readFromDataFile(String fileName)
 	{
 		try
@@ -972,6 +1028,11 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		return new ArrayList<>();
 	}
 
+	/*
+	 * Purpose: Get a list of names of all files in the dataset directory
+	 * Input: None
+	 * Output: List of files within the dataset directory; if none exist, returns empty list
+	 * */
 	private List<String> getAllFilenames ()
 	{
 		List<String> fileNames = new ArrayList<>();
@@ -983,6 +1044,11 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		return fileNames;
 	}
 
+	/*
+	* Purpose: Deletes a .txt file from the directory based on the name
+	* Input: fileName = Name of the file (no path, no extension)
+	* Output: true if the file was deleted; otherwise false
+	* */
 	private boolean deleteFileFromDir (String fileName)
 	{
 		File dir = getDir("dataset", MODE_PRIVATE);
@@ -990,6 +1056,11 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 		return f.delete();
 	}
 
+	/*
+	 * Purpose: Updates the values of the spinner to those within spinnerList
+	 * Input: None
+	 * Output: None
+	 * */
 	private void updateSpinnerList()
 	{
 		ArrayAdapter<String> adp1 = new ArrayAdapter<>(this,
