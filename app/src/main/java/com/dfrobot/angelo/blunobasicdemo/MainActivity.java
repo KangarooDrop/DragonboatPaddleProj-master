@@ -644,7 +644,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 	 * */
 	public static double Lerp(double a, double b, double t)
 	{
-		return (b - a) * t;
+		return a + (b - a) * t;
 	}
 
 	@Override
