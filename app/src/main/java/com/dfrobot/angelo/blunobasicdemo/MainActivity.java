@@ -33,9 +33,10 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
-import android.widget.TableLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.hardware.*;
@@ -111,7 +112,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 
 	/*  Variables for controlling which views are visible to the user  */
 	int displayedView = 0;
-	private TableLayout displayTable,
+	private LinearLayout displayTable,
 		analyticsTable;
 
 	/*  Variables used in calibrating the incoming sensor data from the Bluno; accumulation of all sensor inputs  */
