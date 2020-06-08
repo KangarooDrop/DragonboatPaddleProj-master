@@ -123,6 +123,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 			calibGyroZ = 0;
 	private double calibPressure = 0,
 			calibPressure2 = 0;
+	private Vector3 calibPhoneAcc = new Vector3();
 
 	/*  Variables used after calibration to offset incoming data back to zero  */
 	private double paddleAngleX = 0,
@@ -136,6 +137,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 			averageGyroZ = 0;
 	private double averagePressure,
 			averagePressure2;
+	private Vector3 averagePhoneAcc = new Vector3();
 
 	/*  Variable used by onSerialReceived to ensure no data is lost when the input data is segmented between different calls of onSerialReceived  */
 	String wholeLine = "";
@@ -614,6 +616,10 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 
 		calibPressure = 0;
 		calibPressure2 = 0;
+
+		calibPhoneAcc.x = 0;
+		calibPhoneAcc.y = 0;
+		calibPhoneAcc.z = 0;
 	}
 
 	/*
@@ -805,7 +811,7 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 							analyticsString += "Last stroke duration: " + String.format("%.2f", strokeDuration) + "s\n";
 							analyticsString += "Last stroke frequency: " + String.format("%.2f", strokeFrequency) + "s^-1\n";
                             analyticsString += "Average outward angle: " + String.format("%.2f", (averageWaterAngleEnter.x + averageWaterAngleExit.x) / 2) + " degrees\n";
-                            analyticsString += "Velocity of the phone: " + String.format("%.2f", (phoneAcceleration.len())) + "\n";
+                            analyticsString += "Acceleration of the phone: " + String.format("%.2f", (phoneAcceleration.len() - averagePhoneAcc.len())) + "\n";
 
 							pressureReceivedLast = pressureReceived;
 
@@ -823,6 +829,10 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 							calibGyroY += gyroReceived.y;
 							calibGyroZ += gyroReceived.z;
 
+							calibPhoneAcc.x += phoneAcceleration.x;
+							calibPhoneAcc.y += phoneAcceleration.y;
+							calibPhoneAcc.z += phoneAcceleration.z;
+
 							if (calibTimer >= 3) {
 								averagePressure = calibPressure / calibNumPoints;
 								averagePressure2 = calibPressure2 / calibNumPoints;
@@ -834,6 +844,10 @@ public class MainActivity  extends BlunoLibrary  implements SensorEventListener
 								paddleAngleX = 0;
 								paddleAngleY = 0;
 								paddleAngleZ = 0;
+
+								averagePhoneAcc.x = calibPhoneAcc.x / calibNumPoints;
+								averagePhoneAcc.y = calibPhoneAcc.y / calibNumPoints;
+								averagePhoneAcc.z = calibPhoneAcc.z / calibNumPoints;
 
 								calibrating = false;
 							}
