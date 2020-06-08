@@ -147,15 +147,15 @@
 
         <com.dfrobot.angelo.blunobasicdemo.OrientationViewer
             android:id="@+id/orient_view"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginTop="4dp" />
 
         <com.jjoe64.graphview.GraphView
             android:id="@+id/graph2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_marginLeft="8dp"
             android:layout_marginTop="8dp"
@@ -166,7 +166,7 @@
 
     <LinearLayout
         android:id="@+id/analytics_layout"
-        android:layout_width="fill_parent"
+        android:layout_width="match_parent"
         android:layout_height="fill_parent"
         android:layout_below="@+id/savebutton"
         android:layout_alignParentBottom="true"
@@ -179,8 +179,8 @@
 
         <TextView
             android:id="@+id/analytics_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_marginTop="4dp"
             android:text="Analytics" />
